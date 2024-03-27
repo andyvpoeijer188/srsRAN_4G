@@ -31,7 +31,7 @@ For the BladeRF SoapySDR must also be installed: [https://github.com/pothosware/
 
 ## Clone and build srsRAN
 ```bash
-git clone [https://github.com/andyvpoeijer188/srsRAN_4G]
+git clone https://github.com/andyvpoeijer188/srsRAN_4G.git
 cd srsRAN_4G
 mkdir build
 cd build
