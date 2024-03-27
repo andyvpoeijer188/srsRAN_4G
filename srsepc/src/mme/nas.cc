@@ -91,6 +91,57 @@ bool nas::handle_attach_request(uint32_t                enb_ue_s1ap_id,
   hss_interface_nas*  hss  = itf.hss;
   gtpc_interface_nas* gtpc = itf.gtpc;
 
+  srsran::console("nas ksi: %u \n", attach_req.nas_ksi.nas_ksi);
+  srsran::console("nas mobile id type: %u \n", attach_req.eps_mobile_id.type_of_id);
+  srsran::console("nas mobile imsi: %u \n", attach_req.eps_mobile_id.imsi);
+  srsran::console("nas mobile imei: %u \n", attach_req.eps_mobile_id.imei);
+
+  // srsran::console("ue network capability: " PRIu64 "\n", attach_req.eps_mobile_id.imsi);
+
+  srsran::console("esm msg header: %u \n", attach_req.esm_msg.header);
+  srsran::console("esm msg msg: %u \n", attach_req.esm_msg.msg);
+
+  srsran::console("additional nas mobile id type: %u \n", attach_req.additional_guti.type_of_id);
+  srsran::console("additional nas mobile imsi: %u \n", attach_req.additional_guti.imsi);
+  srsran::console("additional nas mobile imei: %u \n", attach_req.additional_guti.imei);
+
+  srsran::console("last visited registered tracking area mcc: %u \n", attach_req.last_visited_registered_tai.mcc);
+  srsran::console("last visited registered tracking area mnc: %u \n", attach_req.last_visited_registered_tai.mnc);
+  srsran::console("last visited registered tracking area tac: %u \n", attach_req.last_visited_registered_tai.tac);
+
+  srsran::console("drx param split pg cycle code: %u \n", attach_req.drx_param.split_pg_cycle_code);
+  srsran::console("drx param cycle len coeff and value: %u \n", attach_req.drx_param.drx_cycle_len_coeff_and_value);
+  srsran::console("drx param split on ccch: %u \n", attach_req.drx_param.split_on_ccch);
+
+  // srsran::console("ms network capability: %u \n", attach_req.ms_network_cap);
+
+  srsran::console("old location area id mcc: %u \n", attach_req.old_lai.mcc);
+  srsran::console("old location area id mnc: %u \n", attach_req.old_lai.mnc);
+  srsran::console("old location area id lac: %u \n", attach_req.old_lai.lac);
+
+  // srsran::console("mobile station classmark 2: %u \n", attach_req.ms_cm2);
+
+  // srsran::console("mobile station classmark 3: %u \n", attach_req.ms_cm3);
+
+  srsran::console("Amount supported codecs: %u \n", attach_req.supported_codecs.N_supported_codecs);
+
+  // srsran::console("ue usage settings: %s \n", attach_req.voice_domain_pref_and_ue_usage_setting.ue_usage_setting);
+  // srsran::console("ue voice preferences: %s \n", attach_req.voice_domain_pref_and_ue_usage_setting.voice_domain_pref);
+
+  srsran::console("UE Usage Setting: %s\n", liblte_mme_ue_usage_setting_text[attach_req.voice_domain_pref_and_ue_usage_setting.ue_usage_setting]);
+  srsran::console("Voice Domain Pref: %s\n", liblte_mme_voice_domain_pref_text[attach_req.voice_domain_pref_and_ue_usage_setting.voice_domain_pref]);
+
+  srsran::console("tmsi status: %s \n", liblte_mme_tmsi_status_text[attach_req.tmsi_status]);
+
+  srsran::console("aditional update type: %s \n", liblte_mme_additional_update_type_text[attach_req.additional_update_type]);
+
+  srsran::console("device properties: %s \n", liblte_mme_device_properties_text[attach_req.device_properties]);
+
+  srsran::console("old guti type: %s \n", liblte_mme_guti_type_text[attach_req.old_guti_type]);
+
+  srsran::console("old p tmsi signature: %u \n", attach_req.old_p_tmsi_signature);
+  srsran::console("eps attach type: %u \n", attach_req.eps_attach_type);
+
   // Get NAS Attach Request and PDN connectivity request messages
   LIBLTE_ERROR_ENUM err = liblte_mme_unpack_attach_request_msg((LIBLTE_BYTE_MSG_STRUCT*)nas_rx, &attach_req);
   if (err != LIBLTE_SUCCESS) {
@@ -1037,6 +1088,8 @@ bool nas::handle_authentication_response(srsran::byte_buffer_t* nas_rx)
     }
   }
 
+  ue_valid = true;
+
   srsran::unique_byte_buffer_t nas_tx = srsran::make_byte_buffer();
   if (nas_tx == nullptr) {
     m_logger.error("Couldn't allocate PDU in %s().", __FUNCTION__);
@@ -1216,24 +1269,24 @@ bool nas::handle_identity_response(srsran::byte_buffer_t* nas_rx)
   // Set UE's IMSI
   m_emm_ctx.imsi = imsi;
 
-  // Get Authentication Vectors from HSS
-  if (!m_hss->gen_auth_info_answer(imsi, m_sec_ctx.k_asme, m_sec_ctx.autn, m_sec_ctx.rand, m_sec_ctx.xres)) {
-    srsran::console("User not found. IMSI %015" PRIu64 "\n", imsi);
-    m_logger.info("User not found. IMSI %015" PRIu64 "", imsi);
-    return false;
-  }
-  // Identity reponse from unknown GUTI atach. Assigning new eKSI.
-  m_sec_ctx.eksi = 0;
+  // // Get Authentication Vectors from HSS
+  // if (!m_hss->gen_auth_info_answer(imsi, m_sec_ctx.k_asme, m_sec_ctx.autn, m_sec_ctx.rand, m_sec_ctx.xres)) {
+  //   srsran::console("User not found. IMSI %015" PRIu64 "\n", imsi);
+  //   m_logger.info("User not found. IMSI %015" PRIu64 "", imsi);
+  //   return false;
+  // }
+  // // Identity reponse from unknown GUTI atach. Assigning new eKSI.
+  // m_sec_ctx.eksi = 0;
 
-  // Make sure UE context was not previously stored in IMSI map
-  nas* nas_ctx = m_s1ap->find_nas_ctx_from_imsi(imsi);
-  if (nas_ctx != nullptr) {
-    m_logger.warning("UE context already exists.");
-    m_s1ap->delete_ue_ctx(imsi);
-  }
+  // // Make sure UE context was not previously stored in IMSI map
+  // nas* nas_ctx = m_s1ap->find_nas_ctx_from_imsi(imsi);
+  // if (nas_ctx != nullptr) {
+  //   m_logger.warning("UE context already exists.");
+  //   m_s1ap->delete_ue_ctx(imsi);
+  // }
 
-  // Store UE context im IMSI map
-  m_s1ap->add_nas_ctx_to_imsi_map(this);
+  // // Store UE context im IMSI map
+  // m_s1ap->add_nas_ctx_to_imsi_map(this);
 
   // Pack NAS Authentication Request in Downlink NAS Transport msg
   nas_tx = srsran::make_byte_buffer();
@@ -1241,14 +1294,26 @@ bool nas::handle_identity_response(srsran::byte_buffer_t* nas_rx)
     m_logger.error("Couldn't allocate PDU in %s().", __FUNCTION__);
     return false;
   }
-  pack_authentication_request(nas_tx.get());
+  // pack_authentication_request(nas_tx.get());
 
-  // Send reply to eNB
-  m_s1ap->send_downlink_nas_transport(
-      m_ecm_ctx.enb_ue_s1ap_id, m_ecm_ctx.mme_ue_s1ap_id, nas_tx.get(), m_ecm_ctx.enb_sri);
+  // // Send reply to eNB
+  // m_s1ap->send_downlink_nas_transport(
+  //     m_ecm_ctx.enb_ue_s1ap_id, m_ecm_ctx.mme_ue_s1ap_id, nas_tx.get(), m_ecm_ctx.enb_sri);
 
-  m_logger.info("Downlink NAS: Sent Authentication Request");
-  srsran::console("Downlink NAS: Sent Authentication Request\n");
+  // m_logger.info("Downlink NAS: Sent Authentication Request");
+  // srsran::console("Downlink NAS: Sent Authentication Request\n");
+
+  // Assuming pack_attach_accept is a method of the current nas class
+  if (!pack_attach_accept(nas_tx.get())) {
+    m_logger.error("Failed to pack Attach Accept.");
+    return false;
+  }
+
+  m_s1ap->send_downlink_nas_transport(m_ecm_ctx.enb_ue_s1ap_id, m_ecm_ctx.mme_ue_s1ap_id, nas_tx.get(), m_ecm_ctx.enb_sri);
+
+  m_logger.info("Downlink NAS: Sent Attach Accept");
+  srsran::console("Downlink NAS: Sent Attach Accept\n");
+
   return true;
 }
 
@@ -1409,8 +1474,12 @@ bool nas::pack_security_mode_command(srsran::byte_buffer_t* nas_buffer)
   // Pack NAS PDU
   LIBLTE_MME_SECURITY_MODE_COMMAND_MSG_STRUCT sm_cmd;
 
-  sm_cmd.selected_nas_sec_algs.type_of_eea = (LIBLTE_MME_TYPE_OF_CIPHERING_ALGORITHM_ENUM)m_sec_ctx.cipher_algo;
-  sm_cmd.selected_nas_sec_algs.type_of_eia = (LIBLTE_MME_TYPE_OF_INTEGRITY_ALGORITHM_ENUM)m_sec_ctx.integ_algo;
+  // sm_cmd.selected_nas_sec_algs.type_of_eea = (LIBLTE_MME_TYPE_OF_CIPHERING_ALGORITHM_ENUM)m_sec_ctx.cipher_algo;
+  // sm_cmd.selected_nas_sec_algs.type_of_eia = (LIBLTE_MME_TYPE_OF_INTEGRITY_ALGORITHM_ENUM)m_sec_ctx.integ_algo;
+
+  // Force no encryption and no integrity protection for testing purposes
+  sm_cmd.selected_nas_sec_algs.type_of_eea = LIBLTE_MME_TYPE_OF_CIPHERING_ALGORITHM_EEA0;
+  sm_cmd.selected_nas_sec_algs.type_of_eia = LIBLTE_MME_TYPE_OF_INTEGRITY_ALGORITHM_EIA0;
 
   sm_cmd.nas_ksi.tsc_flag = LIBLTE_MME_TYPE_OF_SECURITY_CONTEXT_FLAG_NATIVE;
   sm_cmd.nas_ksi.nas_ksi  = m_sec_ctx.eksi;
